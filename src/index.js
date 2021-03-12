@@ -1,10 +1,14 @@
 const pupeteer = require('puppeteer');
+const AWS = require('aws-sdk');
+const NotificationService = require('./notificationService');
 
-const CHECK_EVERY_NUMBER_OF_SECONDS = 5;
+AWS.config.update({region: 'eu-west-2'});
 
-(async () => {
-  main();
-})();
+const CHECK_EVERY_NUMBER_OF_SECONDS = 60;
+const CHANNEL_ARN = 'arn:aws:sns:eu-west-2:762197375350:ps5-in-stock';
+const notificationService = new NotificationService(new AWS.SNS({apiVersion: 'latest'}))
+
+main();
 
 async function main() {
   const browser = await startBrowser();
@@ -24,7 +28,6 @@ async function startBrowser() {
     });
   } catch (error) {
     console.log(error);
-    process.exit(-1);
   }
 }
 
@@ -54,7 +57,7 @@ async function scrapeAll(browserInstance) {
 
     productResults.forEach(product => {
       if (product.stockStatus !== 'Out of stock') {
-        // alert
+        notificationService.publish(`${product.name} is ${product.stockStatus}`, CHANNEL_ARN);
       } else {
         console.log(`${product.name} is ${product.stockStatus}`);
       }

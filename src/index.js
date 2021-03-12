@@ -35,6 +35,7 @@ async function scrapeAll(browserInstance) {
   try {
     const page = await browserInstance.newPage();
 
+    await page.setCacheEnabled(false);
     await page.goto('https://www.game.co.uk/playstation-5')
     await page.waitForSelector('.contentPanelWrapper');
 
@@ -64,6 +65,7 @@ async function scrapeAll(browserInstance) {
     })
 
   } catch (error) {
+    console.log(error.name);
     console.log(error);
   }
 }

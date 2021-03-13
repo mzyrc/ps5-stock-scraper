@@ -1,6 +1,23 @@
 const pupeteer = require('puppeteer');
 const AWS = require('aws-sdk');
+const {createLogger, format, transports} = require('winston');
+const {combine, timestamp, printf, colorize} = format;
+const Logger = require('./Logger');
 const NotificationService = require('./notificationService');
+
+const winstonLogger = createLogger({
+  level: 'info',
+  format: combine(
+    colorize(),
+    timestamp(),
+    printf(({ level, message, label, timestamp }) => {
+      return `${timestamp} [${label}] ${level}: ${message}`;
+    })
+  ),
+  transports: [new transports.Console()]
+});
+
+const logger = new Logger(winstonLogger)
 
 AWS.config.update({region: 'eu-west-2'});
 
@@ -53,14 +70,19 @@ async function main() {
   const context = await browser.createIncognitoBrowserContext();
 
   for (const config of scrapeListConfig) {
-    console.log(`Checking ${config.name}`);
+    logger.info(config.name, 'Checking stock status');
     const productResults = await scrapeAll(context, config);
+
+    if (!productResults || productResults.length === 0) {
+      await notificationService.publish(`Could not derive stock status for ${config.name}`, CHANNEL_ARN);
+      continue;
+    }
 
     productResults.forEach(product => {
       if (product.stockStatus !== 'Out of stock') {
         notificationService.publish(`${product.name} is ${product.stockStatus}`, CHANNEL_ARN);
       } else {
-        console.log(`${product.name} is ${product.stockStatus}`);
+        logger.info(config.name, `${product.name} is ${product.stockStatus}`);
       }
     })
   }
@@ -92,7 +114,7 @@ async function scrapeAll(browserInstance, config) {
     await page.setCacheEnabled(false);
     await page.goto(config.url)
     await page.waitForSelector(config.keySectionClassName);
-    console.log('found the key section')
+    logger.info(config.name,'Found the key section')
 
     return config.checkPage(page);
   } catch (error) {

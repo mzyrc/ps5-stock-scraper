@@ -64,18 +64,27 @@ const scrapeListConfig = [
       })
     }
   },
-  // {
-  //   name: 'John Lewis',
-  //   url: 'https://www.johnlewis.com/sony-playstation-5-console-with-dualsense-controller/white/p5115192',
-  //   keySectionClassName: 'add-to-basket-summary-and-cta',
-  //   checkPage: async (page) => {
-  //     return page.$$eval('#outOfStock', elements => {
-  //       return elements.filter(element => {
-  //         console.log(element);
-  //       })
-  //     })
-  //   }
-  // }
+  {
+    name: 'John Lewis',
+    url: 'https://www.johnlewis.com/',
+    keySectionClassName: '.pecr-cookie-banner-content__buttons-pG9aE',
+    checkPage: async (page) => {
+      await page.click('.c-button-yMKB7'); // accept cookies
+      await page.goto('https://www.johnlewis.com/search?search-term=playstation%205');
+
+      return page.$$eval('.product-card_c-product-card__container__38Nrq', elements => {
+        return elements.filter((element) => {
+          const productTitle = element.querySelector('h2')
+          return productTitle.textContent === 'Sony PlayStation 5 Console with DualSense Controller'
+        }).map(element => {
+          return {
+            name: element.querySelector('h2').textContent,
+            stockStatus: element.querySelector('.info-section_c-product-card__section__2D2D- > p').textContent
+          };
+        });
+      });
+    }
+  }
 ];
 
 async function main() {
@@ -84,7 +93,7 @@ async function main() {
 
   for (const config of scrapeListConfig) {
     logger.info(config.name, 'Checking stock status');
-    const productResults = await scrapeAll(context, config);
+    const productResults = await scrapeAll(browser, config);
 
     if (!productResults || productResults.length === 0) {
       await notificationService.publish(`Could not derive stock status for ${config.name}`, CHANNEL_ARN);

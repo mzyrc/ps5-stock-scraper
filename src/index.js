@@ -10,7 +10,7 @@ const winstonLogger = createLogger({
   format: combine(
     colorize(),
     timestamp(),
-    printf(({ level, message, label, timestamp }) => {
+    printf(({level, message, label, timestamp}) => {
       return `${timestamp} [${label}] ${level}: ${message}`;
     })
   ),
@@ -22,6 +22,7 @@ const logger = new Logger(winstonLogger)
 AWS.config.update({region: 'eu-west-2'});
 
 const CHECK_EVERY_NUMBER_OF_SECONDS = 60;
+const MAX_NUMBER_OF_ATTEMPTS_PER_CYCLE = 5;
 const CHANNEL_ARN = 'arn:aws:sns:eu-west-2:762197375350:ps5-in-stock';
 const notificationService = new NotificationService(new AWS.SNS({apiVersion: 'latest'}))
 
@@ -62,7 +63,19 @@ const scrapeListConfig = [
         });
       })
     }
-  }
+  },
+  // {
+  //   name: 'John Lewis',
+  //   url: 'https://www.johnlewis.com/sony-playstation-5-console-with-dualsense-controller/white/p5115192',
+  //   keySectionClassName: 'add-to-basket-summary-and-cta',
+  //   checkPage: async (page) => {
+  //     return page.$$eval('#outOfStock', elements => {
+  //       return elements.filter(element => {
+  //         console.log(element);
+  //       })
+  //     })
+  //   }
+  // }
 ];
 
 async function main() {
@@ -103,24 +116,46 @@ async function startBrowser() {
       ignoreHTTPSErrors: true
     });
   } catch (error) {
-    console.log(error);
+    logger.error('chromium', error.message);
   }
 }
 
-async function scrapeAll(browserInstance, config) {
+async function scrapeAll(browserInstance, config, attempts = 0) {
+  if (attempts === MAX_NUMBER_OF_ATTEMPTS_PER_CYCLE) {
+    return [];
+  }
+
   try {
     const page = await browserInstance.newPage();
 
     await page.setCacheEnabled(false);
     await page.goto(config.url)
-    await page.waitForSelector(config.keySectionClassName);
-    logger.info(config.name,'Found the key section')
+    await page.waitForSelector(config.keySectionClassName, {timeout: 5000});
+
+    logger.info(config.name, 'Found the key section')
 
     return config.checkPage(page);
   } catch (error) {
-    console.log(error.name);
-    console.log(error);
+    if (error.name === 'TimeoutError') {
+      logger.error(config.name, 'Could not locate key section, retrying in 5 seconds ...');
+      return delayAndScrape(browserInstance, config, 5, ++attempts);
+    } else {
+      logger.error(config.name, error.message);
+    }
   }
+}
+
+async function delayAndScrape(browserInstance, config, delayInSeconds, attempts = 0) {
+  return new Promise((resolve, reject) => {
+    setTimeout(async () => {
+      try {
+        const result = await scrapeAll(browserInstance, config, attempts);
+        resolve(result)
+      } catch (error) {
+        reject(error);
+      }
+    }, delayInSeconds * 1000);
+  })
 }
 
 main();

@@ -10,7 +10,7 @@ const notificationService = new NotificationService(new AWS.SNS({apiVersion: 'la
 
 const scrapeListConfig = [
   {
-    name: 'Game.co.uk',
+    name: 'Game',
     url: 'https://www.game.co.uk/playstation-5',
     keySectionClassName: '.contentPanelWrapper',
     checkPage: async (page) => {
@@ -29,6 +29,22 @@ const scrapeListConfig = [
         });
       });
     }
+  },
+  {
+    name: 'Amazon',
+    url: 'https://www.amazon.co.uk/PlayStation-9395003-5-Console/dp/B08H95Y452/ref=sr_1_1?dchild=1&keywords=ps5&qid=1615625963&sr=8-1',
+    keySectionClassName: '#outOfStock',
+    checkPage: async (page) => {
+      return page.$$eval('#outOfStock', elements => {
+        return elements.map((element) => {
+          const expectedOutOfStockStatus = 'Currently unavailable';
+          return {
+            name: 'PlayStation 5',
+            stockStatus: element.textContent.includes(expectedOutOfStockStatus) ? 'Out of stock' : 'Unknown status'
+          };
+        });
+      })
+    }
   }
 ];
 
@@ -36,7 +52,7 @@ async function main() {
   const browser = await startBrowser();
   const context = await browser.createIncognitoBrowserContext();
 
-  for(const config of scrapeListConfig) {
+  for (const config of scrapeListConfig) {
     console.log(`Checking ${config.name}`);
     const productResults = await scrapeAll(context, config);
 
@@ -76,6 +92,7 @@ async function scrapeAll(browserInstance, config) {
     await page.setCacheEnabled(false);
     await page.goto(config.url)
     await page.waitForSelector(config.keySectionClassName);
+    console.log('found the key section')
 
     return config.checkPage(page);
   } catch (error) {

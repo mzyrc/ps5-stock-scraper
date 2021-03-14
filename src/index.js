@@ -84,6 +84,29 @@ const scrapeListConfig = [
         });
       });
     }
+  },
+  {
+    name: 'Argos',
+    url: 'https://www.argos.co.uk/browse/technology/video-games-and-consoles/ps5/ps5-consoles/c:812421/',
+    keySectionClassName: 'a[href$=\'/product/8349000\']',
+    checkPage: async (page) => {
+      const response = await page.goto('https://www.argos.co.uk/product/8349000');
+
+      const url = page.url();
+      const productName = 'PlayStation 5';
+
+      if (response._status === 200 && url === 'https://www.argos.co.uk/vp/oos/ps5.html') {
+        return [{
+          name: productName,
+          stockStatus: 'Out of stock'
+        }]
+      } else {
+        return [{
+          name: productName,
+          stockStatus: 'unknown'
+        }]
+      }
+    }
   }
 ];
 
@@ -93,16 +116,20 @@ async function main() {
 
   for (const config of scrapeListConfig) {
     logger.info(config.name, 'Checking stock status');
-    const productResults = await scrapeAll(browser, config);
+    const productResults = await scrapeAll(context, config);
 
     if (!productResults || productResults.length === 0) {
-      await notificationService.publish(`Could not derive stock status for ${config.name}`, CHANNEL_ARN);
+      const message = `Could not derive stock status for ${config.name}`;
+      logger.info(config.name, message);
+      await notificationService.publish(message, CHANNEL_ARN);
       continue;
     }
 
     productResults.forEach(product => {
       if (product.stockStatus !== 'Out of stock') {
-        notificationService.publish(`${product.name} is ${product.stockStatus}`, CHANNEL_ARN);
+        const message = `${product.name} at ${config.name} is ${product.stockStatus}`
+        logger.info(config.name, message);
+        notificationService.publish(message, CHANNEL_ARN);
       } else {
         logger.info(config.name, `${product.name} is ${product.stockStatus}`);
       }
@@ -120,7 +147,7 @@ async function main() {
 async function startBrowser() {
   try {
     return pupeteer.launch({
-      headless: true,
+      headless: false,
       args: ["--disable-setuid-sandbox"],
       ignoreHTTPSErrors: true
     });

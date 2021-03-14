@@ -1,4 +1,9 @@
-# Game - PS5 Stock tracker 
+# PS5 Stock tracker 
+
+- Game
+- Amazon
+- John Lewis
+- Argos
 
 ## Setup
 ```bash

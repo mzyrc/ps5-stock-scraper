@@ -3,6 +3,7 @@ module.exports = class Amazon {
     this.name = 'Amazon';
     this.url = 'https://www.amazon.co.uk/PlayStation-9395003-5-Console/dp/B08H95Y452/ref=sr_1_1?dchild=1&keywords=ps5&qid=1615625963&sr=8-1';
     this.keySectionClassName = '#outOfStock';
+    this.useChrome = true;
   }
 
   async checkPage(page) {

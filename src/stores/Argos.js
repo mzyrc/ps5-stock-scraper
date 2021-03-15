@@ -1,26 +1,25 @@
+const axios = require('axios');
+const cheerio = require('cheerio')
+
 module.exports = class Argos {
   constructor() {
     this.name = 'Argos';
-    this.url = 'https://www.argos.co.uk/browse/technology/video-games-and-consoles/ps5/ps5-consoles/c:812421/';
-    this.keySectionClassName = 'a[href$=\'/product/8349000\']';
+    this.url = 'https://www.argos.co.uk/product/8349000';
+    this.useChrome = false;
   }
 
-  async checkPage(page) {
-    const response = await page.goto('https://www.argos.co.uk/product/8349000');
+  async checkPage() {
+    const response = await axios.get(this.url);
 
-    const url = page.url();
+    const $ = cheerio.load(response.data);
+    const headerText = $('#h1title').text();
     const productName = 'PlayStation 5';
 
-    if (response._status === 200 && url === 'https://www.argos.co.uk/vp/oos/ps5.html') {
-      return [{
+    return [
+      {
         name: productName,
-        stockStatus: 'Out of stock'
-      }]
-    } else {
-      return [{
-        name: productName,
-        stockStatus: 'unknown'
-      }]
-    }
+        stockStatus: headerText === 'Sorry, PlayStation®5 is currently unavailable.' ? 'Out of stock' : 'unknown'
+      }
+    ];
   }
 }

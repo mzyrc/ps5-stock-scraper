@@ -3,6 +3,7 @@ module.exports = class Game {
     this.name = 'Game';
     this.url = 'https://www.game.co.uk/playstation-5';
     this.keySectionClassName = '.contentPanelWrapper';
+    this.useChrome = true;
   }
 
   async checkPage(page) {

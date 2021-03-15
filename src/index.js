@@ -4,8 +4,8 @@ const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf, colorize} = format;
 const Logger = require('./Logger');
 const NotificationService = require('./notificationService');
-const {Game, Amazon, JohnLewis, Argos, Asda, Very} = require('./stores');
-const Scraper = require('./Scraper');
+const {Game, Amazon, JohnLewis, Argos, Very} = require('./stores');
+const WebScraper = require('./WebScraper');
 const logger = configureLogger();
 
 AWS.config.update({region: 'eu-west-2'});
@@ -18,34 +18,33 @@ async function main() {
   const browser = await startBrowser();
   const incognitoBrowser = await browser.createIncognitoBrowserContext();
 
-  const scrapeListConfig = [
+  const storeList = [
     new Game(),
     new Amazon(),
     new JohnLewis(),
     new Argos(),
-    new Asda(),
     new Very()
   ];
 
-  for (const config of scrapeListConfig) {
-    logger.info(config.name, 'Checking stock status');
-    const scraper = new Scraper(browser, config, logger);
-    const productResults = await scraper.scrape();
+  for (const store of storeList) {
+    logger.info(store.name, 'Checking stock status');
+    const scraper = new WebScraper(browser, logger);
+    const productResults = await scraper.scrape(store);
 
     if (!productResults || productResults.length === 0) {
-      const message = `Could not derive stock status for ${config.name}`;
-      logger.info(config.name, message);
+      const message = `Could not derive stock status for ${store.name}`;
+      logger.info(store.name, message);
       await notificationService.publish(message, CHANNEL_ARN);
       continue;
     }
 
     productResults.forEach(product => {
       if (product.stockStatus !== 'Out of stock') {
-        const message = `${product.name} at ${config.name} is ${product.stockStatus}`
-        logger.info(config.name, message);
+        const message = `${product.name} at ${store.name} is ${product.stockStatus}`
+        logger.info(store.name, message);
         notificationService.publish(message, CHANNEL_ARN);
       } else {
-        logger.info(config.name, `${product.name} is ${product.stockStatus}`);
+        logger.info(store.name, `${product.name} is ${product.stockStatus}`);
       }
     });
   }
@@ -61,7 +60,7 @@ async function main() {
 async function startBrowser() {
   try {
     return pupeteer.launch({
-      headless: false,
+      headless: true,
       args: ["--disable-setuid-sandbox"],
       ignoreHTTPSErrors: true
     });

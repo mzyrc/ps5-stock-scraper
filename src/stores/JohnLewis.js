@@ -3,6 +3,7 @@ module.exports = class JohnLewis {
     this.name = 'John Lewis';
     this.url = 'https://www.johnlewis.com/';
     this.keySectionClassName = '.pecr-cookie-banner-content__buttons-pG9aE';
+    this.useChrome = true;
   }
 
   async checkPage(page) {

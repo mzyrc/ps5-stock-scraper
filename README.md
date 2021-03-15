@@ -4,6 +4,8 @@
 - Amazon
 - John Lewis
 - Argos
+- Asda
+- Very
 
 ## Setup
 ```bash

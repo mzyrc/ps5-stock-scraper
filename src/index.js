@@ -4,7 +4,7 @@ const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf, colorize} = format;
 const Logger = require('./Logger');
 const NotificationService = require('./notificationService');
-const {Game, Amazon, JohnLewis, Argos} = require('./stores');
+const {Game, Amazon, JohnLewis, Argos, Asda, Very} = require('./stores');
 const Scraper = require('./Scraper');
 const logger = configureLogger();
 
@@ -16,13 +16,15 @@ const notificationService = new NotificationService(new AWS.SNS({apiVersion: 'la
 
 async function main() {
   const browser = await startBrowser();
-  const context = await browser.createIncognitoBrowserContext();
+  const incognitoBrowser = await browser.createIncognitoBrowserContext();
 
   const scrapeListConfig = [
     new Game(),
     new Amazon(),
     new JohnLewis(),
-    // new Argos()
+    new Argos(),
+    new Asda(),
+    new Very()
   ];
 
   for (const config of scrapeListConfig) {
@@ -45,10 +47,10 @@ async function main() {
       } else {
         logger.info(config.name, `${product.name} is ${product.stockStatus}`);
       }
-    })
+    });
   }
 
-  await context.close();
+  await incognitoBrowser.close();
   await browser.close();
 
   setTimeout(() => {
@@ -59,7 +61,7 @@ async function main() {
 async function startBrowser() {
   try {
     return pupeteer.launch({
-      headless: true,
+      headless: false,
       args: ["--disable-setuid-sandbox"],
       ignoreHTTPSErrors: true
     });

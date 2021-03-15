@@ -6,7 +6,6 @@ module.exports = class Game {
   }
 
   async checkPage(page) {
-    console.log('here');
     return page.$$eval('.contentPanelItem', elements => {
       return elements.filter(element => {
         const productName = element.querySelector('h3').textContent;

@@ -3,7 +3,7 @@ const AWS = require('aws-sdk');
 const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf, colorize} = format;
 const Logger = require('./Logger');
-const NotificationService = require('./notificationService');
+const NotificationService = require('./NotificationService');
 const {Game, Amazon, JohnLewis, Argos, Very} = require('./stores');
 const WebScraper = require('./WebScraper');
 const logger = configureLogger();
@@ -28,8 +28,8 @@ async function main() {
 
   for (const store of storeList) {
     logger.info(store.name, 'Checking stock status');
-    const scraper = new WebScraper(browser, logger);
-    const productResults = await scraper.scrape(store);
+    const webScraper = new WebScraper(browser, logger);
+    const productResults = await webScraper.scrape(store);
 
     if (!productResults || productResults.length === 0) {
       const message = `Could not derive stock status for ${store.name}`;
